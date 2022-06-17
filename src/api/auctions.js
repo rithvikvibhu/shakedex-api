@@ -27,6 +27,8 @@ module.exports = {
     });
   },
   'POST /api/v1/auctions': async (req, res) => {
+    throw new ValidationError('Not accepting new auctions currently, try again in a few days.');
+
     if (!req.body) {
       throw new ValidationError('Must define a request body.');
     }
