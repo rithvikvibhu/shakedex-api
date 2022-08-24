@@ -7,7 +7,7 @@ block content
             .col.d-flex.align-items-center
                 h1 #{auction.name}/
                 div.ml-auto
-                    a.btn.btn-primary.btn-md(href=`/api/v1/auctions/${auction.id}/download`) Download Presigns
+                    a.btn.btn-primary.btn-md(href=`/api/v2/auctions/${auction.id}/download`) Download Presigns
 
 
         .row.mb-4
@@ -48,4 +48,4 @@ block content
                               td
                                 input.w-100.form-control.form-control-sm(editable=false value=bid.signature)
                               td.text-right
-                                a(class=`btn btn-primary btn-sm ${bid.lockTime > now ? 'disabled' : ''}` href=`/api/v1/auctions/${auction.id}/download`) Fulfill
+                                a(class=`btn btn-primary btn-sm ${bid.lockTime > now ? 'disabled' : ''}` href=`/api/v2/auctions/${auction.id}/download`) Fulfill

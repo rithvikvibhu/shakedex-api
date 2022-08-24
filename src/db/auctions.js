@@ -310,7 +310,7 @@ class AuctionsDB {
       bidId: first.bid_id,
       price: first.price,
       signature: first.signature,
-      lockTime: first.lockTime,
+      lockTime: first.lock_time.getTime() / 1000 >>> 0,
     };
   }
 
@@ -334,6 +334,7 @@ class AuctionsDB {
   inflateJoinedAuctionRow(rows) {
     const row = rows[0];
     return {
+      version: 2,
       id: row.id,
       name: row.name,
       publicKey: row.public_key,
@@ -347,13 +348,14 @@ class AuctionsDB {
       bids: rows.map(r => ({
         price: Number(r.price),
         signature: r.signature,
-        lockTime: r.lock_time.getTime(),
+        lockTime: r.lock_time.getTime() / 1000 >>> 0,
       })),
     };
   }
 
   inflateAuctionRow(auction, bids) {
     return {
+      version: 2,
       id: auction.id,
       name: auction.name,
       publicKey: auction.public_key,
@@ -367,7 +369,7 @@ class AuctionsDB {
       bids: bids.map(b => ({
         price: Number(b.price),
         signature: b.signature,
-        lockTime: b.lock_time.getTime(),
+        lockTime: b.lock_time.getTime() / 1000 >>> 0,
       })),
     };
   }

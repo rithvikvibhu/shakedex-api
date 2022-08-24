@@ -18,6 +18,10 @@ const auctionSchema = {
     'data',
   ],
   properties: {
+    version: {
+      type: 'integer',
+      minimum: 2,
+    },
     name: {
       type: 'string',
     },

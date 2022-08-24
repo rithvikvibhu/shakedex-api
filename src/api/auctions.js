@@ -1,7 +1,7 @@
-const {ValidationError} = require('../service/errors.js');
+const {ValidationError, NotFoundError} = require('../service/errors.js');
 const {container} = require('../container.js');
 const viewHelpers = require('../viewHelpers.js');
-const {SwapProof, writeProofStream} = require('shakedex/src/swapProof.js');
+const {Auction} = require('shakedex/src/auction.js');
 
 module.exports = {
   'GET /': async (req, res) => {
@@ -26,8 +26,10 @@ module.exports = {
       viewHelpers,
     });
   },
-  'POST /api/v1/auctions': async (req, res) => {
-    throw new ValidationError('Not accepting new auctions currently, try again in a few days.');
+  'POST /api/:v/auctions': async (req, res) => {
+    if (req.params.v === 'v1') {
+      throw new ValidationError('Update your software, Shakedex V2 is a breaking change.');
+    }
 
     if (!req.body) {
       throw new ValidationError('Must define a request body.');
@@ -40,7 +42,14 @@ module.exports = {
     res.status(200);
     res.json(auction);
   },
-  'GET /api/v1/auctions': async (req, res) => {
+  'GET /api/:v/auctions': async (req, res) => {
+    if (req.params.v === 'v1') {
+      res.json({
+        auctions: [],
+        total: 0,
+      });
+      return;
+    }
     const {page, per_page: perPage, search, sort_field: sortField, sort_direction: sortDirection} = req.query;
     let filters = req.query.filters;
     if (filters) {
@@ -58,7 +67,10 @@ module.exports = {
       total,
     });
   },
-  'GET /api/v1/auctions/:auction_id': async (req, res) => {
+  'GET /api/:v/auctions/:auction_id': async (req, res) => {
+    if (req.params.v === 'v1') {
+      throw new NotFoundError(`Auction not found. Update to api v2.`);
+    }
     const auctionService = await container.resolve('AuctionService');
     const auction = await auctionService.getAuction(req.params.auction_id);
     res.status(200);
@@ -66,7 +78,10 @@ module.exports = {
       auction,
     });
   },
-  'GET /api/v1/auctions/n/:name': async (req, res) => {
+  'GET /api/:v/auctions/n/:name': async (req, res) => {
+    if (req.params.v === 'v1') {
+      throw new NotFoundError(`Auction not found. Update to api v2.`);
+    }
     const auctionService = await container.resolve('AuctionService');
     const auction = await auctionService.getAuctionByName(req.params.name);
     res.status(200);
@@ -74,32 +89,35 @@ module.exports = {
       auction,
     });
   },
-  'GET /api/v1/auctions/:auction_id/download': async (req, res) => {
+  'GET /api/:v/auctions/:auction_id/download': async (req, res) => {
+    if (req.params.v === 'v1') {
+      throw new NotFoundError(`Auction not found. Update to api v2.`);
+    }
     const auctionService = await container.resolve('AuctionService');
     const auction = await auctionService.getAuction(req.params.auction_id);
     await streamAuctionRes(auction, res);
   },
-  'GET /api/v1/auctions/n/:name/download': async (req, res) => {
+  'GET /api/:v/auctions/n/:name/download': async (req, res) => {
+    if (req.params.v === 'v1') {
+      throw new NotFoundError(`Auction not found. Update to api v2.`);
+    }
     const auctionService = await container.resolve('AuctionService');
     const auction = await auctionService.getAuctionByName(req.params.name);
     await streamAuctionRes(auction, res)
   },
 };
 
-async function streamAuctionRes(auction, res) {
+async function streamAuctionRes(auctionJSON, res) {
   res.status(200);
-  res.append('Content-Disposition', `attachment; filename=auction-${auction.name}-${auction.id}.txt`);
+  res.append('Content-Disposition', `attachment; filename=auction-${auctionJSON.name}-${auctionJSON.id}.json`);
   res.append('Content-Type', 'text/plain');
-  const proofs = auction.bids.map(a => new SwapProof({
-    name: auction.name,
-    lockingTxHash: auction.lockingTxHash,
-    lockingOutputIdx: auction.lockingOutputIdx,
-    publicKey: auction.publicKey,
-    paymentAddr: auction.paymentAddr,
-    price: Number(a.price),
-    lockTime: Math.floor(a.lockTime / 1000),
-    signature: a.signature,
-  }));
-  await writeProofStream(res, proofs, await container.resolve('SDContext'));
+
+  const context = await container.resolve('SDContext');
+
+  auctionJSON.data = auctionJSON.bids;
+  const auction = new Auction(auctionJSON);
+  const data = auction.toJSON(context);
+
+  await res.write(JSON.stringify(data));
   res.end();
 }
